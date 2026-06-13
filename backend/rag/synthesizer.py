@@ -50,22 +50,23 @@ def synthesize_fix(
             diagnosis_text += f"  - {b}\n"
 
   
-    prompt = f"""You are a PyTorch performance expert. A developer ran KernelPilot on their PyTorch code and got the following diagnosis.
+    prompt = f"""You are a PyTorch performance expert.
 
 {diagnosis_text}
 
-Here is relevant PyTorch documentation to help you explain the issues and fixes:
+Documentation:
 {doc_context}
 
-Based on the diagnosis and documentation above, provide:
+Respond with EXACTLY these three sections and nothing else:
 
-1. EXPLANATION: A clear 2-3 sentence explanation of what is causing the performance issues and why.
+EXPLANATION:
+[2-3 sentences explaining what is causing the performance issues]
 
-2. SUGGESTED FIX: Concrete, specific code changes the developer should make. Include actual code snippets where helpful. Be specific to the issues found, not generic advice.
+SUGGESTED FIX:
+[Concrete code changes with snippets]
 
-3. PRIORITY: Which single issue should they fix first for the biggest impact?
-
-Keep your response practical and direct. No fluff."""
+PRIORITY:
+[Which single issue to fix first]"""
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 

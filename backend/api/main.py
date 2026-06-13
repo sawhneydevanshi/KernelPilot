@@ -3,7 +3,8 @@ import torch.nn as nn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
+from backend.rag.retrieval_pipeline import retrieve_for_diagnosis
+from backend.rag.synthesizer import synthesize_fix
 from backend.core.orchestrator import run_orchestration, OrchestrationReport
 
 app = FastAPI(
@@ -11,7 +12,6 @@ app = FastAPI(
     description="AI-powered PyTorch bottleneck diagnosis platform",
     version="1.0.0",
 )
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,12 +21,11 @@ app.add_middleware(
 )
 
 
-
-
 class AnalyzeRequest(BaseModel):
-    source_code: str                  
-    model_type: str = "simple_cnn"    
-    batch_size: int = 4               
+    source_code: str
+    model_type: str = "simple_cnn"
+    batch_size: int = 4
+
 
 class StaticIssueResponse(BaseModel):
     line: int
@@ -57,8 +56,8 @@ class AnalyzeResponse(BaseModel):
     gpu_telemetry: GPUTelemetryResponse
     summary: list[str]
     errors: dict
-
-
+    rag_result: dict = {}
+    retrieved_docs: list = []
 
 
 class SimpleCNN(nn.Module):
@@ -97,15 +96,13 @@ class SimpleLinear(nn.Module):
 MODEL_REGISTRY = {
     "simple_cnn": {
         "model": SimpleCNN,
-        "input_shape": (3, 32, 32),   
+        "input_shape": (3, 32, 32),
     },
     "simple_linear": {
         "model": SimpleLinear,
         "input_shape": (128,),
     },
 }
-
-
 
 
 @app.get("/")
@@ -124,7 +121,6 @@ def health():
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 def analyze(request: AnalyzeRequest):
- 
     if request.model_type not in MODEL_REGISTRY:
         raise HTTPException(
             status_code=400,
@@ -132,14 +128,12 @@ def analyze(request: AnalyzeRequest):
                    f"Choose from: {list(MODEL_REGISTRY.keys())}"
         )
 
-    
     if not request.source_code.strip():
         raise HTTPException(
             status_code=400,
             detail="source_code cannot be empty."
         )
 
-    
     registry_entry = MODEL_REGISTRY[request.model_type]
     model = registry_entry["model"]()
     input_shape = (request.batch_size,) + registry_entry["input_shape"]
@@ -150,6 +144,36 @@ def analyze(request: AnalyzeRequest):
         model=model,
         sample_input=sample_input,
     )
+
+    diagnosis_dict = {
+        "static_issues": [
+            {"code": issue.code, "message": issue.message}
+            for issue in report.static_issues
+        ],
+        "profiler": {
+            "slowest_op": report.profiler_report.slowest_op if report.profiler_report else "",
+            "bottleneck_device": report.profiler_report.bottleneck_device if report.profiler_report else "",
+            "warnings": report.profiler_report.warnings if report.profiler_report else [],
+        },
+        "gpu_telemetry": {
+            "peak_memory_mb": report.gpu_report.peak_memory_mb if report.gpu_report else 0,
+            "avg_utilization_pct": report.gpu_report.avg_utilization_pct if report.gpu_report else 0,
+            "bottlenecks": report.gpu_report.bottlenecks if report.gpu_report else [],
+        },
+        "summary": [],
+    }
+
+    try:
+        retrieved_docs = retrieve_for_diagnosis(
+            diagnosis_dict,
+            top_k_per_query=3,
+            max_final_results=4,
+            use_query_expansion=False,
+        )
+        rag_result = synthesize_fix(diagnosis_dict, retrieved_docs)
+    except Exception as e:
+        retrieved_docs = []
+        rag_result = {"error": str(e)}
 
     return AnalyzeResponse(
         total_time_seconds=report.total_time_seconds,
@@ -187,4 +211,6 @@ def analyze(request: AnalyzeRequest):
         ),
         summary=report.summary,
         errors=report.errors,
+        rag_result=rag_result,
+        retrieved_docs=retrieved_docs,
     )

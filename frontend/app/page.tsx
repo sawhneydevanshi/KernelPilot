@@ -71,7 +71,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-1">
           Kernel<span className="text-blue-400">Pilot</span>
@@ -81,7 +80,6 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Editor */}
       <div className="mb-4">
         <label className="text-xs text-gray-500 uppercase tracking-widest mb-2 block">
           PyTorch Code
@@ -105,7 +103,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Button */}
       <button
         onClick={handleAnalyze}
         disabled={loading || !code.trim()}
@@ -114,7 +111,6 @@ export default function Home() {
         {loading ? "Analyzing..." : "Analyze"}
       </button>
 
-      {/* Loading */}
       {loading && (
         <div className="border border-gray-800 rounded-lg p-8 text-center mb-6">
           <div className="inline-block w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mb-3" />
@@ -124,17 +120,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="border border-red-900 bg-red-950/50 rounded-lg p-4 text-red-400 text-sm mb-6">
           {error}
         </div>
       )}
 
-      {/* Results */}
       {result && (
         <div className="space-y-6">
-          {/* Summary bar */}
           <div className="flex items-center gap-4 text-sm text-gray-400 border-b border-gray-800 pb-4">
             <span className="text-green-400 font-medium">✓ Analysis complete</span>
             <span>{result.total_time_seconds?.toFixed(2)}s</span>
@@ -144,7 +137,6 @@ export default function Home() {
             <span>Bottleneck: <span className="text-white">{result.profiler?.bottleneck_device}</span></span>
           </div>
 
-          {/* Static Analysis */}
           <section>
             <h2 className="text-xs text-gray-500 uppercase tracking-widest mb-3">
               Static Analysis
@@ -169,7 +161,6 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Profiler */}
           <section>
             <h2 className="text-xs text-gray-500 uppercase tracking-widest mb-3">
               Profiler — Top Operations
@@ -191,12 +182,8 @@ export default function Home() {
                       className={`border-b border-gray-800/50 ${i === 0 ? "text-yellow-400" : "text-gray-300"}`}
                     >
                       <td className="p-3 font-mono text-xs">{op.name}</td>
-                      <td className="p-3 text-right font-mono text-xs">
-                        {op.cpu_time_ms.toFixed(3)}
-                      </td>
-                      <td className="p-3 text-right font-mono text-xs">
-                        {op.cuda_time_ms.toFixed(3)}
-                      </td>
+                      <td className="p-3 text-right font-mono text-xs">{op.cpu_time_ms.toFixed(3)}</td>
+                      <td className="p-3 text-right font-mono text-xs">{op.cuda_time_ms.toFixed(3)}</td>
                       <td className="p-3 text-right font-mono text-xs">{op.calls}</td>
                     </tr>
                   ))}
@@ -208,7 +195,6 @@ export default function Home() {
             </p>
           </section>
 
-          {/* GPU Telemetry */}
           <section>
             <h2 className="text-xs text-gray-500 uppercase tracking-widest mb-3">
               GPU Telemetry {result.gpu_telemetry?.mock_data && (
@@ -217,23 +203,11 @@ export default function Home() {
             </h2>
             <div className="grid grid-cols-3 gap-3">
               {[
-                {
-                  label: "Peak Memory",
-                  value: `${result.gpu_telemetry?.peak_memory_mb?.toFixed(0)} MB`,
-                },
-                {
-                  label: "Avg Utilization",
-                  value: `${result.gpu_telemetry?.avg_utilization_pct?.toFixed(1)}%`,
-                },
-                {
-                  label: "Avg Temperature",
-                  value: `${result.gpu_telemetry?.avg_temperature_c?.toFixed(1)}°C`,
-                },
+                { label: "Peak Memory", value: `${result.gpu_telemetry?.peak_memory_mb?.toFixed(0)} MB` },
+                { label: "Avg Utilization", value: `${result.gpu_telemetry?.avg_utilization_pct?.toFixed(1)}%` },
+                { label: "Avg Temperature", value: `${result.gpu_telemetry?.avg_temperature_c?.toFixed(1)}°C` },
               ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="border border-gray-800 rounded-lg p-4"
-                >
+                <div key={stat.label} className="border border-gray-800 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">{stat.label}</p>
                   <p className="text-xl font-semibold text-white">{stat.value}</p>
                 </div>
@@ -249,6 +223,62 @@ export default function Home() {
               </div>
             )}
           </section>
+
+          {result.rag_result?.explanation && (
+            <section>
+              <h2 className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+                AI-Generated Fix
+              </h2>
+              <div className="border border-blue-900 bg-blue-950/20 rounded-lg p-5 space-y-4">
+                <div>
+                  <p className="text-xs text-blue-400 uppercase tracking-wide mb-2">What's wrong</p>
+                  <p className="text-sm text-gray-300 leading-relaxed">{result.rag_result.explanation}</p>
+                </div>
+                {result.rag_result.suggested_fix && (
+  <div>
+    <p className="text-xs text-blue-400 uppercase tracking-wide mb-2">How to fix it</p>
+    <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-mono bg-gray-900/50 rounded p-3">
+      {result.rag_result.suggested_fix.replace(/```python\n?/g, '').replace(/```\n?/g, '')}
+    </div>
+  </div>
+)}
+                {result.rag_result.priority && (
+                  <div>
+                    <p className="text-xs text-blue-400 uppercase tracking-wide mb-2">Fix this first</p>
+                    <p className="text-sm text-gray-300 leading-relaxed">{result.rag_result.priority}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {result.rag_result?.relevant_docs?.length > 0 && (
+            <section>
+              <h2 className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+                Source Documentation
+              </h2>
+              <div className="space-y-2">
+                {result.rag_result.relevant_docs.map((doc: any, i: number) => (
+                  <a
+                    key={i}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between border border-gray-800 rounded-lg p-3 hover:border-gray-600 transition-colors group"
+                  >
+                    <div>
+                      <p className="text-sm text-gray-300 group-hover:text-white transition-colors">{doc.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{doc.url}</p>
+                    </div>
+                    <span className="text-xs text-gray-600 font-mono ml-4 shrink-0">
+                      {(doc.relevance_score * 100).toFixed(0)}% match
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+
         </div>
       )}
     </main>
