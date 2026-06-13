@@ -6,3 +6,6 @@ nvidia-ml-py
 python-dotenv
 pydantic
 requests
+beautifulsoup4
+httpx
+tiktoken
