@@ -5,3 +5,4 @@ astroid
 nvidia-ml-py
 python-dotenv
 pydantic
+requests
