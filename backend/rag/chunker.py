@@ -33,9 +33,13 @@ def chunk_page(page: ScrapedPage, enc: tiktoken.Encoding) -> list[DocChunk]:
         chunk_tokens = tokens[start:end]
         chunk_text = enc.decode(chunk_tokens)
 
+        url_slug = page.url.split("/")[-1].replace(".rst", "").replace(".html", "")
+
+        import hashlib
+        title_hash = hashlib.md5(page.title.encode()).hexdigest()[:6]
+        chunk_id = f"{url_slug}-{title_hash}-{chunk_index:04d}"
       
-        url_slug = page.url.split("/")[-1].replace(".html", "")
-        chunk_id = f"{url_slug}-{chunk_index:04d}"
+        
 
         chunks.append(DocChunk(
             chunk_id=chunk_id,
